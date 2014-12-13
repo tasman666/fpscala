@@ -17,13 +17,17 @@ object Par {
   }
 
   private case class FutureWithTimeout[A,B,C](f1: Future[A], f2: Future[B])(f: (A,B) => C) extends Future[C] {
-    def isDone = f1.isDone && f2.isDone
-    def get(timeout: Long, units: TimeUnit) = {
-      val timeoutMillis = TimeUnit.MILLISECONDS.convert(timeout, units)
-      val currentTime = System.currentTimeMillis()
-      val a = f1.get(timeoutMillis, TimeUnit.MILLISECONDS)
-      val b = f2.get(timeoutMillis - (System.currentTimeMillis() - currentTime), TimeUnit.MILLISECONDS)
-      f(a,b)
+    var cache: Option[C] = None
+    def isDone = cache.isDefined
+    def get(timeout: Long, units: TimeUnit) = cache match {
+      case Some(c) => c
+      case None =>
+        val timeoutMillis = TimeUnit.MILLISECONDS.convert(timeout, units)
+        val startTime = System.currentTimeMillis()
+        val a = f1.get(timeoutMillis, TimeUnit.MILLISECONDS)
+        val b = f2.get(timeoutMillis - (System.currentTimeMillis() - startTime), TimeUnit.MILLISECONDS)
+        cache = Some(f(a, b))
+        cache.get
     }
     def get() = {
       f(f1.get(), f2.get())
@@ -96,7 +100,7 @@ object Examples {
 
   def main(args: Array[String]): Unit = {
     val sum = Examples.sumPar(IndexedSeq(1,2,3,4,34,456,436,456,4))
-    val executor: ExecutorService = Executors.newFixedThreadPool(4)
+    val executor: ExecutorService = Executors.newFixedThreadPool(10)
     val result = Par.run(executor)(sum)
     println("Sum result:"  + result.get(4, TimeUnit.SECONDS))
     executor.shutdown()
