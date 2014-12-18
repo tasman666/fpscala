@@ -31,8 +31,11 @@ object Par {
         cache = Some(f(a, b))
         cache.get
     }
-    def get() = {
-      f(f1.get(), f2.get())
+    def get() = cache match {
+      case Some(c) => c
+      case None =>
+          cache = Some(f(f1.get(), f2.get()))
+          cache.get
     }
     def isCancelled = f1.isCancelled || f2.isCancelled
     def cancel(evenIfRunning: Boolean): Boolean = f1.cancel(evenIfRunning) || f2.cancel(evenIfRunning)
@@ -79,6 +82,10 @@ object Par {
   class ParOps[A](p: Par[A]) {
 
 
+  }
+
+  def asyncF[A,B](f: A => B): A => Par[B] = {
+    a => lazyUnit(f(a))
   }
 }
 
