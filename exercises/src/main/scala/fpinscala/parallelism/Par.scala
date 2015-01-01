@@ -99,7 +99,7 @@ object Par {
 
   def parMap[A,B](ps: List[A])(f: A => B): Par[List[B]] = fork {
     val fbs: List[Par[B]] = ps.map(asyncF(f))
-    sequence(fbs)
+    sequence_simple(fbs)
   }
 }
 
@@ -122,10 +122,22 @@ object Examples {
     }
 
   def main(args: Array[String]): Unit = {
-    val sum = Examples.sumPar(IndexedSeq(1,2,3,4,34,456,436,456,4))
     val executor: ExecutorService = Executors.newFixedThreadPool(10)
-    val result = Par.run(executor)(sum)
-    println("Sum result:"  + result.get(4, TimeUnit.SECONDS))
+    calculateSum(executor)
+    calculateProduct(executor)
     executor.shutdown()
   }
+
+  def calculateSum(executor: ExecutorService) {
+    val sum = Examples.sumPar(IndexedSeq(1, 2, 3, 4, 34, 456, 436, 456, 4))
+    val result = Par.run(executor)(sum)
+    println("Sum result:" + result.get(4, TimeUnit.SECONDS))
+  }
+
+  def calculateProduct(executor: ExecutorService) {
+    val parProduct = Par.parMap(List(3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,13,14,14))(a => a * 3)
+    val result = Par.run(executor)(parProduct)
+    println("product result:" + result.get(4, TimeUnit.SECONDS))
+  }
+
 }
