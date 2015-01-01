@@ -137,28 +137,15 @@ object Examples {
 
   def main(args: Array[String]): Unit = {
     val executor: ExecutorService = Executors.newFixedThreadPool(10)
-    calculateSum(executor)
-    calculateProduct(executor)
-    filter(executor)
+    calculate("Sum", executor, Examples.sumPar(IndexedSeq(1, 2, 3, 4, 34, 456, 436, 456, 4)));
+    calculate("Product", executor, Par.parMap(List(3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,13,14,14))(a => a * 3))
+    calculate("Filter", executor, Par.parFilter(List(3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,13,14,14))(a => a % 2 == 0))
     executor.shutdown()
   }
 
-  def calculateSum(executor: ExecutorService) {
-    val sum = Examples.sumPar(IndexedSeq(1, 2, 3, 4, 34, 456, 436, 456, 4))
-    val result = Par.run(executor)(sum)
-    println("Sum result:" + result.get(4, TimeUnit.SECONDS))
+  def calculate[A](label: String, executor: ExecutorService, par: Par[A]) = {
+    val result = Par.run(executor)(par)
+    printf("Result %s: " + result.get(4, TimeUnit.SECONDS), label)
+    println()
   }
-
-  def calculateProduct(executor: ExecutorService) {
-    val parProduct = Par.parMap(List(3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,13,14,14))(a => a * 3)
-    val result = Par.run(executor)(parProduct)
-    println("product result:" + result.get(4, TimeUnit.SECONDS))
-  }
-
-  def filter(executor: ExecutorService) = {
-    val parFilter = Par.parFilter(List(3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,13,14,14))(a => a % 2 == 0)
-    val result = Par.run(executor)(parFilter)
-    println("filter result:" + result.get(4, TimeUnit.SECONDS))
-  }
-
 }
