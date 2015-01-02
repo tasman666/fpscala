@@ -115,12 +115,12 @@ object Par {
     map(sequence(pars))(_.flatten)
   }
 
-  def parFold(seq: IndexedSeq[Int])(f: (Int,Int) => Int): Par[Int] = {
+  def parFold[A](seq: IndexedSeq[A], z: A)(f: (A,A) => A): Par[A] = {
     if (seq.length <= 1) {
-      Par.unit(seq.headOption getOrElse 0)
+      Par.unit(seq.headOption getOrElse z)
     } else {
       val (l,r) = seq.splitAt(seq.length/2)
-      Par.map2Timeout(Par.fork(parFold(l)(f)), Par.fork(parFold(r)(f)))(f)
+      Par.map2Timeout(Par.fork(parFold(l, z)(f)), Par.fork(parFold(r, z)(f)))(f)
     }
   }
 }
@@ -137,8 +137,8 @@ object Examples {
 
   def main(args: Array[String]): Unit = {
     val executor: ExecutorService = Executors.newFixedThreadPool(10)
-    calculate("Sum", executor, Par.parFold(IndexedSeq(1, 2, 3, 4, 34, 456, 436, 456, 4))(_ + _));
-    calculate("Max", executor, Par.parFold(IndexedSeq(1, 2, 3, 4, 34, 456, 436, 456, 4))((a,b) => if (a > b) a else b));
+    calculate("Sum", executor, Par.parFold(IndexedSeq(1, 2, 3, 4, 34, 456, 436, 456, 4), 0)(_ + _));
+    calculate("Max", executor, Par.parFold(IndexedSeq(1, 2, 3, 4, 34, 456, 436, 456, 4), 0)((a,b) => if (a > b) a else b));
     calculate("Product", executor, Par.parMap(List(3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,13,14,14))(a => a * 3))
     calculate("Filter", executor, Par.parFilter(List(3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,13,14,14))(a => a % 2 == 0))
     executor.shutdown()
