@@ -138,6 +138,7 @@ object Par {
       Par.map2Timeout(Par.fork(parFold(l, z)(f)), Par.fork(parFold(r, z)(f)))(f)
     }
   }
+
 }
 
 object Examples {
@@ -150,12 +151,24 @@ object Examples {
       sum(l) + sum(r) // Recursively sum both halves and add the results together.
     }
 
+  def totalWords(paragraphs: List[String]): Par[Int] = {
+    if (paragraphs.size == 0)
+      unit(0)
+    else if (paragraphs.size == 1) {
+      unit(paragraphs.head.split("\\s+").size);
+    } else {
+      val (l,r) = paragraphs.splitAt(paragraphs.length/2)
+      Par.map2Timeout(Par.fork(totalWords(l)), Par.fork(totalWords(r)))( _ + _)
+    }
+  }
+
   def main(args: Array[String]): Unit = {
     val executor: ExecutorService = Executors.newFixedThreadPool(10)
     calculate("Sum", executor, Par.parFold(IndexedSeq(1, 2, 3, 4, 34, 456, 436, 456, 4), 0)(_ + _));
     calculate("Max", executor, Par.parFold(IndexedSeq(1, 2, 3, 4, 34, 456, 436, 456, 4), 0)((a,b) => if (a > b) a else b));
     calculate("Product", executor, Par.parMap(List(3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,13,14,14))(a => a * 3))
     calculate("Filter", executor, Par.parFilter(List(3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,13,14,14))(a => a % 2 == 0))
+    calculate("Total words", executor, totalWords(List("very simple text", "test", "more words in text")))
     executor.shutdown()
   }
 
