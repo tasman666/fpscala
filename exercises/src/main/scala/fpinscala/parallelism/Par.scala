@@ -63,6 +63,15 @@ object Par {
       FutureWithTimeout(af, bf)(f)
     }
 
+  def map3[A, B, C, D](pa: Par[A], pb: Par[B], pc: Par[C])(f: (A, B, C) => D): Par[D] =
+    flatMap(pa) ( a => map2(pb, pc)( (b,c) => f(a,b,c)))
+
+  def map4[A, B, C, D, E](pa: Par[A], pb: Par[B], pc: Par[C], pd: Par[D])(f: (A, B, C, D) => E): Par[E] =
+    flatMap(pa) ( a => flatMap(pb)( b => map2(pc, pd) ( (c,d) => f(a,b,c,d))))
+
+  def map5[A, B, C, D, E, F](pa: Par[A], pb: Par[B], pc: Par[C], pd: Par[D], pe: Par[E])(f: (A, B, C, D, E) => F): Par[F] =
+    flatMap(pa) ( a => flatMap(pb)( b => flatMap(pc) ( c => map2(pd, pe) ((d,e) => f(a,b,c,d,e)))))
+
   def fork[A](a: => Par[A]): Par[A] = // This is the simplest and most natural implementation of `fork`, but there are some problems with it--for one, the outer `Callable` will block waiting for the "inner" task to complete. Since this blocking occupies a thread in our thread pool, or whatever resource backs the `ExecutorService`, this implies that we're losing out on some potential parallelism. Essentially, we're using two threads when one should suffice. This is a symptom of a more serious problem with the implementation, and we will discuss this later in the chapter.
     es => es.submit(new Callable[A] {
       def call = a(es).get
@@ -70,6 +79,12 @@ object Par {
 
   def map[A, B](pa: Par[A])(f: A => B): Par[B] =
     map2(pa, unit(()))((a, _) => f(a))
+
+  def flatMap[A, B](pa: Par[A])(f: A => Par[B]): Par[B] =
+    (es: ExecutorService) => {
+      val pb: Par[B] = f(pa(es).get)
+      UnitFuture(pb(es).get)
+    }
 
   def sortPar(parList: Par[List[Int]]) = map(parList)(_.sorted)
 
