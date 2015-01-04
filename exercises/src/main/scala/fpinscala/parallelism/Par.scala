@@ -151,6 +151,11 @@ object Par {
     }
   }
 
+  def parFold[A, B](as: List[A], z: B)(f: A => B)(g: (B, B) => B): Par[B] = {
+    val parList: Par[List[B]] = parMap(as)(a => f(a))
+    flatMap(parList)(asyncF(list => list.foldRight(z)((a,b) => g(a,b))))
+  }
+
 }
 
 object Examples {
@@ -164,9 +169,7 @@ object Examples {
     }
 
   def totalWords(paragraphs: List[String]): Par[Int] = {
-      val parList: Par[List[Int]] = parMap(paragraphs)(a => a.split("\\s+").size)
-      flatMap(parList)(asyncF(list => list.foldRight(0)(_ + _))
-    )
+    parFold(paragraphs, 0) (a => a.split("\\s+").size)(_ + _)
   }
 
   def main(args: Array[String]): Unit = {
