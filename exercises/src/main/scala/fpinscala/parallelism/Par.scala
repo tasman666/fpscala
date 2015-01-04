@@ -111,7 +111,19 @@ object Par {
     a => lazyUnit(f(a))
   }
 
-  def sequence[A](ps: List[Par[A]]): Par[List[A]] =
+  def sequenceBalanced[A](as: IndexedSeq[Par[A]]): Par[IndexedSeq[A]] = fork {
+    if (as.isEmpty) unit(Vector())
+    else if (as.length == 1) map(as.head)(a => Vector(a))
+    else {
+      val (l,r) = as.splitAt(as.length/2)
+      map2(sequenceBalanced(l), sequenceBalanced(r))(_ ++ _)
+    }
+  }
+
+  def sequence[A](as: List[Par[A]]): Par[List[A]] =
+    map(sequenceBalanced(as.toIndexedSeq))(_.toList)
+
+  def sequence2[A](ps: List[Par[A]]): Par[List[A]] =
     (es: ExecutorService) => {
       val futures = ps.map(par => par(es))
       UnitFuture(futures.map(f => f.get))
@@ -158,11 +170,11 @@ object Examples {
   }
 
   def main(args: Array[String]): Unit = {
-    val executor: ExecutorService = Executors.newFixedThreadPool(10)
+    val executor: ExecutorService = Executors.newFixedThreadPool(17)
     calculate("Sum", executor, Par.parFold(IndexedSeq(1, 2, 3, 4, 34, 456, 436, 456, 4), 0)(_ + _));
     calculate("Max", executor, Par.parFold(IndexedSeq(1, 2, 3, 4, 34, 456, 436, 456, 4), 0)((a,b) => if (a > b) a else b));
-    calculate("Product", executor, Par.parMap(List(3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,13,14,14))(a => a * 3))
-    calculate("Filter", executor, Par.parFilter(List(3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,13,14,14))(a => a % 2 == 0))
+    calculate("Product", executor, Par.parMap(List(3, 4, 5, 6, 7, 8, 9, 10))(a => a * 3))
+    calculate("Filter", executor, Par.parFilter(List(3, 4, 5, 6, 7, 8, 9, 10))(a => a % 2 == 0))
     calculate("Total words", executor, totalWords(List("very simple text", "test", "more words in text")))
     calculate("Total words one word", executor, totalWords(List("very")))
     calculate("Total words empty list", executor, totalWords(List()))
