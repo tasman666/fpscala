@@ -122,7 +122,7 @@ object Par {
 
   def parMap[A, B](ps: List[A])(f: A => B): Par[List[B]] = fork {
     val fbs: List[Par[B]] = ps.map(asyncF(f))
-    sequence_simple(fbs)
+    sequence(fbs)
   }
 
   def parFilter[A](as: List[A])(f: A => Boolean): Par[List[A]] = {
@@ -152,14 +152,9 @@ object Examples {
     }
 
   def totalWords(paragraphs: List[String]): Par[Int] = {
-    if (paragraphs.size == 0)
-      unit(0)
-    else if (paragraphs.size == 1) {
-      unit(paragraphs.head.split("\\s+").size);
-    } else {
-      val (l,r) = paragraphs.splitAt(paragraphs.length/2)
-      Par.map2Timeout(Par.fork(totalWords(l)), Par.fork(totalWords(r)))( _ + _)
-    }
+      val parList: Par[List[Int]] = parMap(paragraphs)(a => a.split("\\s+").size)
+      flatMap(parList)(asyncF(list => list.foldRight(0)(_ + _))
+    )
   }
 
   def main(args: Array[String]): Unit = {
@@ -169,6 +164,8 @@ object Examples {
     calculate("Product", executor, Par.parMap(List(3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,13,14,14))(a => a * 3))
     calculate("Filter", executor, Par.parFilter(List(3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,13,14,14))(a => a % 2 == 0))
     calculate("Total words", executor, totalWords(List("very simple text", "test", "more words in text")))
+    calculate("Total words one word", executor, totalWords(List("very")))
+    calculate("Total words empty list", executor, totalWords(List()))
     executor.shutdown()
   }
 
