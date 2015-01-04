@@ -142,16 +142,11 @@ object Par {
     map(sequence(pars))(_.flatten)
   }
 
-  def parFold[A](seq: IndexedSeq[A], z: A)(f: (A,A) => A): Par[A] = {
-    if (seq.length <= 1) {
-      Par.unit(seq.headOption getOrElse z)
-    } else {
-      val (l,r) = seq.splitAt(seq.length/2)
-      Par.map2Timeout(Par.fork(parFold(l, z)(f)), Par.fork(parFold(r, z)(f)))(f)
-    }
+  def parFold[A](seq: List[A], z: A)(f: (A,A) => A): Par[A] = {
+    flatMap(unit(seq))(asyncF(as => as.foldRight(z)((a,b) => f(a,b))))
   }
 
-  def parFold[A, B](as: List[A], z: B)(f: A => B)(g: (B, B) => B): Par[B] = {
+  def parFold2[A, B](as: List[A], z: B)(f: A => B)(g: (B, B) => B): Par[B] = {
     val parList: Par[List[B]] = parMap(as)(a => f(a))
     flatMap(parList)(asyncF(list => list.foldRight(z)((a,b) => g(a,b))))
   }
@@ -169,13 +164,13 @@ object Examples {
     }
 
   def totalWords(paragraphs: List[String]): Par[Int] = {
-    parFold(paragraphs, 0) (a => a.split("\\s+").size)(_ + _)
+    parFold2(paragraphs, 0) (a => a.split("\\s+").size)(_ + _)
   }
 
   def main(args: Array[String]): Unit = {
     val executor: ExecutorService = Executors.newFixedThreadPool(17)
-    calculate("Sum", executor, Par.parFold(IndexedSeq(1, 2, 3, 4, 34, 456, 436, 456, 4), 0)(_ + _));
-    calculate("Max", executor, Par.parFold(IndexedSeq(1, 2, 3, 4, 34, 456, 436, 456, 4), 0)((a,b) => if (a > b) a else b));
+    calculate("Sum", executor, Par.parFold(List(1, 2, 3, 4, 34, 456, 436, 456, 4), 0)(_ + _));
+    calculate("Max", executor, Par.parFold(List(1, 2, 3, 4, 34, 456, 436, 456, 4), 0)((a,b) => if (a > b) a else b));
     calculate("Product", executor, Par.parMap(List(3, 4, 5, 6, 7, 8, 9, 10))(a => a * 3))
     calculate("Filter", executor, Par.parFilter(List(3, 4, 5, 6, 7, 8, 9, 10))(a => a % 2 == 0))
     calculate("Total words", executor, totalWords(List("very simple text", "test", "more words in text")))
