@@ -147,8 +147,7 @@ object Par {
   }
 
   def parFold2[A, B](as: List[A], z: B)(f: A => B)(g: (B, B) => B): Par[B] = {
-    val parList: Par[List[B]] = parMap(as)(a => f(a))
-    fold(parList,z)(g)
+    fold(parMap(as)(a => f(a)),z)(g)
   }
 
   def fold[A](input: Par[List[A]], z: A)(f: (A,A) => A): Par[A] = {
