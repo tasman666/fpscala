@@ -150,7 +150,7 @@ object Par {
     fold(parMap(as)(a => f(a)),z)(g)
   }
 
-  def fold[A](input: Par[List[A]], z: A)(f: (A,A) => A): Par[A] = {
+  def fold[A](input: Par[List[A]], z: A)(f: (A,A) => A): Par[A] = fork {
     flatMap(input)(asyncF(as => as.foldRight(z)((a,b) => f(a,b))))
   }
 }
