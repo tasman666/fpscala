@@ -142,15 +142,18 @@ object Par {
     map(sequence(pars))(_.flatten)
   }
 
-  def parFold[A](seq: List[A], z: A)(f: (A,A) => A): Par[A] = {
-    flatMap(unit(seq))(asyncF(as => as.foldRight(z)((a,b) => f(a,b))))
+  def parFold[A](input: List[A], z: A)(f: (A,A) => A): Par[A] = {
+    fold(unit(input),z)(f)
   }
 
   def parFold2[A, B](as: List[A], z: B)(f: A => B)(g: (B, B) => B): Par[B] = {
     val parList: Par[List[B]] = parMap(as)(a => f(a))
-    flatMap(parList)(asyncF(list => list.foldRight(z)((a,b) => g(a,b))))
+    fold(parList,z)(g)
   }
 
+  def fold[A](input: Par[List[A]], z: A)(f: (A,A) => A): Par[A] = {
+    flatMap(input)(asyncF(as => as.foldRight(z)((a,b) => f(a,b))))
+  }
 }
 
 object Examples {
