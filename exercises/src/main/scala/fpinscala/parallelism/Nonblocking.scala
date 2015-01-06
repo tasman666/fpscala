@@ -1,6 +1,6 @@
 package fpinscala.parallelism
 
-import java.util.concurrent.{Callable, CountDownLatch, ExecutorService}
+import java.util.concurrent._
 import java.util.concurrent.atomic.AtomicReference
 
 object Nonblocking {
@@ -169,5 +169,23 @@ object Nonblocking {
       def map2[B,C](b: Par[B])(f: (A,B) => C): Par[C] = Par.map2(p,b)(f)
       def zip[B](b: Par[B]): Par[(A,B)] = p.map2(b)((_,_))
     }
+
+    def parMap[A, B](ps: List[A])(f: A => B): Par[List[B]] = fork {
+      val fbs: List[Par[B]] = ps.map(asyncF(f))
+      sequence(fbs)
+    }
+
+  }
+
+  def main(args: Array[String]): Unit = {
+    val executor: ExecutorService = Executors.newFixedThreadPool(2)
+    calculate("Product", executor, Par.parMap(List(3, 4, 5, 6, 7, 8, 9, 10))(a => a * 3))
+    executor.shutdown()
+  }
+
+  def calculate[A](label: String, executor: ExecutorService, par: Par[A]) = {
+    val result = Par.run(executor)(par)
+    printf("Result %s: " + result, label)
+    println()
   }
 }
