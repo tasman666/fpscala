@@ -141,7 +141,7 @@ object Nonblocking {
     }
 
     def choiceViaChoiceN[A](a: Par[Boolean])(ifTrue: Par[A], ifFalse: Par[A]): Par[A] =
-      ???
+      choiceN(map(a)(a => if (a) 0 else 1))(List(ifTrue, ifFalse))
 
     def choiceMap[K,V](p: Par[K])(ps: Map[K,Par[V]]): Par[V] =
       ???
@@ -187,11 +187,12 @@ object Nonblocking {
 
   def main(args: Array[String]): Unit = {
     val executor: ExecutorService = Executors.newFixedThreadPool(2)
-    val parMap: ((Int) => Int) => Par[List[Int]] = Par.parMap(List(3, 4, 5, 6, 7, 8, 9, 10))
-    calculate("Product", executor, parMap(a => a * 5))
     val randomN: Int = Random.nextInt(3)
-    val unit: Par[Int] = Par.unit(randomN)
-    calculate("Choice n = " + randomN, executor, Par.choiceN(unit)(List(parMap(a => a * 2), parMap(a => a * 3), parMap(a => a * 4))))
+    val parRandomN: Par[Int] = Par.unit(randomN)
+    val parMap: ((Int) => Int) => Par[List[Int]] = Par.parMap(List(3, 4, 5, 6, 7, 8, 9, 10))
+    calculate("Product", executor, parMap(_ * 5))
+    calculate("Choice n = " + randomN, executor, Par.choiceN(parRandomN)(List(parMap(_ * 2), parMap(_ * 3), parMap(_ * 4))))
+    calculate("Choice true ", executor, Par.choiceViaChoiceN(Par.unit(true))(Par.unit("true result"), Par.unit("false result")))
     executor.shutdown()
   }
 
