@@ -105,6 +105,12 @@ object Par {
       run(es)(ps(index))
     }
 
+  def choiceMap[K,V](p: Par[K])(ps: Map[K,Par[V]]): Par[V] =
+    es => {
+      val key = run(es)(p).get
+      run(es)(ps(key))
+    }
+
   /* Gives us infix syntax for `Par`. */
   implicit def toParOps[A](p: Par[A]): ParOps[A] = new ParOps(p)
 
