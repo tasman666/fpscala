@@ -3,6 +3,8 @@ package fpinscala.parallelism
 import java.util.concurrent._
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.util.Random
+
 object Nonblocking {
 
   trait Future[+A] {
@@ -130,7 +132,13 @@ object Nonblocking {
           }
       }
 
-    def choiceN[A](p: Par[Int])(ps: List[Par[A]]): Par[A] = ???
+    def choiceN[A](p: Par[Int])(ps: List[Par[A]]): Par[A] =
+      es => new Future[A] {
+      def apply(cb: A => Unit): Unit =
+        p(es) { n =>
+          eval(es) {ps(n)(es)(cb)}
+        }
+    }
 
     def choiceViaChoiceN[A](a: Par[Boolean])(ifTrue: Par[A], ifFalse: Par[A]): Par[A] =
       ???
@@ -179,7 +187,11 @@ object Nonblocking {
 
   def main(args: Array[String]): Unit = {
     val executor: ExecutorService = Executors.newFixedThreadPool(2)
-    calculate("Product", executor, Par.parMap(List(3, 4, 5, 6, 7, 8, 9, 10))(a => a * 3))
+    val parMap: ((Int) => Int) => Par[List[Int]] = Par.parMap(List(3, 4, 5, 6, 7, 8, 9, 10))
+    calculate("Product", executor, parMap(a => a * 5))
+    val randomN: Int = Random.nextInt(3)
+    val unit: Par[Int] = Par.unit(randomN)
+    calculate("Choice n = " + randomN, executor, Par.choiceN(unit)(List(parMap(a => a * 2), parMap(a => a * 3), parMap(a => a * 4))))
     executor.shutdown()
   }
 
