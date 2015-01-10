@@ -83,7 +83,7 @@ object Par {
   def flatMap[A, B](pa: Par[A])(f: A => Par[B]): Par[B] =
     (es: ExecutorService) => {
       val pb: Par[B] = f(pa(es).get)
-      UnitFuture(pb(es).get)
+      pb(es)
     }
 
   def sortPar(parList: Par[List[Int]]) = map(parList)(_.sorted)
